@@ -3,8 +3,10 @@ package com.example.ev3opencv;
 import android.os.AsyncTask;
 import android.util.Log;
 
+import java.io.BufferedWriter;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.ServerSocket;
@@ -27,15 +29,15 @@ class EV3Communicator {
         private boolean isConnected = false;
         protected Boolean doInBackground(Void... params) {
             try {
-                Log.i(MainActivity.TAG, "Serversocket creation");
+                //Log.i(MainActivity.TAG, "Serversocket creation");
                 socket = new ServerSocket(1234);
-                Log.i(MainActivity.TAG, "accepting connection");
+                //Log.i(MainActivity.TAG, "accepting connection");
                 Socket conn = socket.accept();
                 out = new DataOutputStream(conn.getOutputStream());
                 return true;
             } catch (IOException e) {
-                Log.e(MainActivity.TAG, e.getMessage());
-                Log.e(MainActivity.TAG, e.getCause().toString());
+                //Log.e(MainActivity.TAG, e.getMessage());
+                //Log.e(MainActivity.TAG, e.getCause().toString());
             }
             return false;
         }
@@ -47,7 +49,7 @@ class EV3Communicator {
             if (result) {
                 isConnected = true;
             }
-            Log.i(MainActivity.TAG, "Connect state:" + isConnected);
+            //Log.i(MainActivity.TAG, "Connect state:" + isConnected);
         }
 
         void close() {
@@ -55,7 +57,7 @@ class EV3Communicator {
                 out.close();
                 socket.close();
             } catch (IOException e) {
-                Log.e(MainActivity.TAG, "Cannot close connection");
+                //Log.e(MainActivity.TAG, "Cannot close connection");
             }
         }
     }
@@ -69,12 +71,12 @@ class EV3Communicator {
     }
 
 
-    void sendDirection(double direction) {
+    void sendMessage(String message) {
         if( isConnected() ) {
             try {
-                connectTask.out.writeDouble(direction);
+                connectTask.out.writeUTF(message);
             } catch (IOException e) {
-                Log.e(MainActivity.TAG,"Cannot send, connection terminated");
+                // Log.e(MainActivity.TAG,"Cannot send, connection terminated");
                 connectTask.close();
                 connectTask = new ConnectTask();
                 connectTask.execute();

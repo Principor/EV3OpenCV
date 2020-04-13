@@ -1,7 +1,6 @@
 package com.example.ev3opencv;
 
 import android.app.Activity;
-import android.util.Log;
 
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
@@ -34,7 +33,8 @@ public class CameraHandler implements CvCameraViewListener2 {
     private String ipAddress;
     private EV3Communicator ev3Communicator;
     private Point org;
-    Activity parent;
+    private Activity parent;
+    private long lastTime;
 
     public CameraHandler(Activity parent) {
         this.parent = parent;
@@ -55,9 +55,10 @@ public class CameraHandler implements CvCameraViewListener2 {
         try {
             ipAddress = EV3Communicator.getIPAddress(true);
         } catch (SocketException e) {
-            Log.e(MainActivity.TAG, "Cannot get IP address");
+            //Log.e(MainActivity.TAG, "Cannot get IP address");
             e.printStackTrace();
         }
+        lastTime = System.nanoTime();
     }
 
     @Override
@@ -75,29 +76,42 @@ public class CameraHandler implements CvCameraViewListener2 {
         mDetector.process(mRgba);
         List<MatOfPoint> contours = mDetector.getContours();
         if( ev3Communicator.isConnected() ) {
-            Log.i(MainActivity.TAG, "Contours count: " + contours.size());
+            //Log.i(MainActivity.TAG, "Contours count: " + contours.size());
         }
         Imgproc.drawContours(mRgba, contours, -1, CONTOUR_COLOR);
         Point center = mDetector.getCenterOfMaxContour();
-        double direction = 0;
+        String result = "";
         if( center != null ) {
             Imgproc.drawMarker(mRgba, center, MARKER_COLOR);
-            direction = (center.x - mRgba.cols()/2)/mRgba.cols(); // portrait orientation
-            if( ev3Communicator.isConnected() ) {
-                Log.i(MainActivity.TAG, "direction: " + direction);
-            }
+            double xdirection = (center.x - mRgba.cols()/2)/mRgba.cols();
+            double ydirection = (center.y - mRgba.rows()/2)/mRgba.rows();
+            result = shortenString(xdirection) + " " + shortenString(ydirection);
         }
         int font = FONT_HERSHEY_SIMPLEX;
-        if( ev3Communicator.isConnected() ) {
+        if( ev3Communicator.isConnected() && System.nanoTime() - 1e8 > lastTime) {
             if( center == null ) {
-                direction = -100; // sending extreme value when blue is not found
+                result = "NULL";
             }
-            ev3Communicator.sendDirection(direction);
+            ev3Communicator.sendMessage("DIRECTION " + result);
             font = FONT_HERSHEY_DUPLEX;
+            lastTime = System.nanoTime();
         }
         Imgproc.putText(mRgba,ipAddress,org,font,1,TEXT_COLOR);
 
+
         return mRgba;
+    }
+
+    private String shortenString(double string){
+        return shortenString(Double.toString(string));
+    }
+
+    private String shortenString(String string){
+        int length = 6;
+        if (string.length() > 6){
+            return string.substring(0, length);
+        }
+        return string;
     }
 
     void setEV3Communicator(EV3Communicator ev3Communicator) {
